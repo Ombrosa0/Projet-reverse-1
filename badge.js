@@ -16,7 +16,6 @@ app.use(express.json());
 
 let db, badgesCollection;
 
-// Connexion à la DB avant de lancer le serveur
 async function startServer() {
   try {
     await client.connect();
@@ -25,7 +24,7 @@ async function startServer() {
 
     console.log("Connecté à MongoDB !");
     
-    // Initialisation de la DB (seed)
+    
     await seedDatabase();
 
     app.listen(3000, () => console.log("Serveur sur http://localhost:3000"));
@@ -69,8 +68,8 @@ app.post("/create_badge", async (req, res) => {
 // Récupérer tous les badges
 app.get("/badgesall", async (req, res) => {
   try {
-    const badges = await badgesCollection.find().toArray(); // Récupère tous les badges
-    res.json(badges); // Retourne la liste des badges sous forme de JSON
+    const badges = await badgesCollection.find().toArray(); 
+    res.json(badges); 
   } catch (error) {
     res.status(500).json({ error: "Erreur serveur" });
   }
@@ -84,7 +83,7 @@ app.put("/modif_badge", async (req, res) => {
       return res.status(400).json({ error: "badge_id, level et name sont requis" });
     }
 
-    // Modifier le badge en utilisant le badge_id
+    
     const result = await badgesCollection.updateOne(
       { badge_id: badge_id },
       { $set: { level, name, updated_at: new Date() } }
@@ -103,10 +102,10 @@ app.put("/modif_badge", async (req, res) => {
 // Supprimer un badge
 app.delete("/delete_badge", async (req, res) => {
   try {
-    const { badge_id } = req.body; // Récupère le badge_id depuis le body
+    const { badge_id } = req.body; 
     if (!badge_id) return res.status(400).json({ error: "badge_id manquant" });
 
-    // Supprimer le badge en utilisant le badge_id
+    
     const result = await badgesCollection.deleteOne({ badge_id: badge_id });
 
     if (result.deletedCount === 0) {
