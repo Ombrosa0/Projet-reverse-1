@@ -130,3 +130,24 @@ app.delete("/delete_badge", async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
+
+app.get("/badge", async (req, res) => {
+  try {
+    const { badge_id } = req.body;
+    if (!badge_id) {
+      return res.status(400).json({ error: "badge_id requis" });
+    }
+
+    const badge = await badgesCollection.findOne({ badge_id });
+
+    if (!badge) {
+      return res.status(200).json({ error: "Badge introuvable" });
+    }
+
+    console.log(`[${colors.green("OK")}] Badge récupéré : ${badge_id}`);
+    res.json(badge);
+  } catch (error) {
+    console.error(`[${colors.red("ERREUR")}] Récupération badge :`, error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
