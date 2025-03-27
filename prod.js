@@ -147,7 +147,7 @@ app.delete("/delete_badge", async (req, res) => {
   }
 });
 
-app.get("/badge", async (req, res) => {
+app.post("/badge", async (req, res) => {
   try {
     const { badge_id } = req.body;
     if (!badge_id) {
