@@ -43,7 +43,7 @@ async function startServer() {
       cert: fs.readFileSync("/etc/letsencrypt/live/arduinoooo.lol/fullchain.pem"),
     };
 
-    const port = process.env.PORT || 666;
+    const port = process.env.PORT || 443;
     https.createServer(options, app).listen(port, () => {
       console.log(`[${colors.green("OK")}] Serveur lancé sur https://arduinoooo.lol:${port}`);
     });
