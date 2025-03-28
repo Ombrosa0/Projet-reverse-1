@@ -195,7 +195,7 @@ app.post("/badge", async (req, res) => {
 app.get("/last_badge", async (req, res) => {
     try {
         const badge = await lastBadgeCollection.findOne();
-        if (!badge) return res.status(404).json({ error: "Aucun badge récent" });
+        if (!badge) return res.status(202).json({ error: "Aucun badge récent" });
         res.json(badge);
     } catch (error) {
         console.error(`[${colors.red("ERREUR")}] Récupération last_badge :`, error);
