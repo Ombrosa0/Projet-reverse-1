@@ -192,7 +192,7 @@ async function startServer() {
     try {
         await client.connect();
         db = client.db("badge-db");
-        // lastBadgeCollection = db.collection("last_badge");
+        lastBadgeCollection = db.collection("last_badge");
 
         // try {
         //     await lastBadgeCollection.createIndex({ createdAt: 1 }, { expireAfterSeconds: 30 });
