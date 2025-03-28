@@ -1,21 +1,31 @@
 const express = require("express");
+const dotenv = require("dotenv").config();
+const https = require("https");
+const fs = require("fs");
+const path = require("path");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const colors = require("colors");
 const jwt = require("jsonwebtoken");
+const morgan = require("morgan");
+const cors = require("cors");
 const bodyParser = require("body-parser");
-require("dotenv").config();
 
-// Sécurité : Vérifie la clé secrète
 if (!process.env.JWT_SECRET) {
   console.error("ERREUR : JWT_SECRET n'est pas défini dans le fichier .env");
   process.exit(1);
 }
 
-// Configuration MongoDB
-const uri =
-  process.env.MONGODB_URI ||
-  "mongodb+srv://cmendesdasilva:tdHvwsn2mVKtDGCk@badge-db.foqirp2.mongodb.net/?retryWrites=true&w=majority&appName=badge-db";
+const MODE = process.env.MODE || "dev";
+const app = express();
+app.use(bodyParser.json());
+app.use(morgan("dev"));
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
+const uri = process.env.MONGODB_URI || "mongodb+srv://cmendesdasilva:tdHvwsn2mVKtDGCk@badge-db.foqirp2.mongodb.net/?retryWrites=true&w=majority&appName=badge-db";
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -25,17 +35,15 @@ const client = new MongoClient(uri, {
   connectTimeoutMS: 5000,
 });
 
-// Express App
-const app = express();
-app.use(bodyParser.json());
+let db, badgesCollection, logsCollection;
 
-let db, badgesCollection;
+const users = [
+  { username: 'admin', password: 'admin123' }
+];
 
-// Middleware JWT
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader?.split(' ')[1];
-
   if (!token) return res.sendStatus(401);
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
@@ -45,12 +53,22 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// Utilisateur local pour test
-const users = [
-  { username: 'admin', password: 'admin123' }
-];
+async function logAction({ action, badge_id, name, details }) {
+  const log = {
+    action,
+    badge_id,
+    name,
+    date_heure: new Date().toISOString(),
+    details
+  };
+  try {
+    await logsCollection.insertOne(log);
+    console.log(`[${colors.cyan("LOG")}] ${action} - ${badge_id}`);
+  } catch (err) {
+    console.error(`[${colors.red("ERREUR")}] Insertion du log échouée :`, err);
+  }
+}
 
-// Authentification
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
   const user = users.find(u => u.username === username && u.password === password);
@@ -65,24 +83,14 @@ app.post('/login', (req, res) => {
 
 app.use(authenticateToken);
 
-// ROUTES
 app.post("/create_badge", async (req, res) => {
   try {
     const { badge_id, level, name } = req.body;
-    if (!badge_id || !level || !name) {
-      return res.status(400).json({ error: "badge_id, level et name sont requis" });
-    }
+    if (!badge_id || !level || !name) return res.status(400).json({ error: "badge_id, level et name sont requis" });
 
-    const newBadge = {
-      badge_id,
-      level,
-      name,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-
+    const newBadge = { badge_id, level, name, created_at: new Date(), updated_at: new Date() };
     await badgesCollection.insertOne(newBadge);
-    console.log(`[${colors.green("OK")}] Badge créé : ${badge_id}`);
+    await logAction({ action: "ajout_badge", badge_id, name, details: `Badge ajouté avec niveau ${level}` });
     res.status(201).json({ message: "Badge créé", badge: newBadge });
   } catch (error) {
     console.error(`[${colors.red("ERREUR")}] Création du badge :`, error);
@@ -93,7 +101,6 @@ app.post("/create_badge", async (req, res) => {
 app.get("/badgesall", async (req, res) => {
   try {
     const badges = await badgesCollection.find().toArray();
-    console.log(`[${colors.green("OK")}] Récupération de tous les badges.`);
     res.json(badges);
   } catch (error) {
     console.error(`[${colors.red("ERREUR")}] Récupération badges :`, error);
@@ -104,20 +111,12 @@ app.get("/badgesall", async (req, res) => {
 app.put("/modif_badge", async (req, res) => {
   try {
     const { badge_id, level, name } = req.body;
-    if (!badge_id || !level || !name) {
-      return res.status(400).json({ error: "badge_id, level et name sont requis" });
-    }
+    if (!badge_id || !level || !name) return res.status(400).json({ error: "badge_id, level et name sont requis" });
 
-    const result = await badgesCollection.updateOne(
-      { badge_id },
-      { $set: { level, name, updated_at: new Date() } }
-    );
+    const result = await badgesCollection.updateOne({ badge_id }, { $set: { level, name, updated_at: new Date() } });
+    if (result.matchedCount === 0) return res.status(404).json({ error: "Badge introuvable" });
 
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: "Badge introuvable" });
-    }
-
-    console.log(`[${colors.green("OK")}] Badge mis à jour : ${badge_id}`);
+    await logAction({ action: "modif_badge", badge_id, name, details: `Badge modifié au niveau ${level}` });
     res.json({ message: "Badge mis à jour" });
   } catch (error) {
     console.error(`[${colors.red("ERREUR")}] Modification badge :`, error);
@@ -130,13 +129,11 @@ app.delete("/delete_badge", async (req, res) => {
     const { badge_id } = req.body;
     if (!badge_id) return res.status(400).json({ error: "badge_id manquant" });
 
-    const result = await badgesCollection.deleteOne({ badge_id });
+    const badge = await badgesCollection.findOne({ badge_id });
+    if (!badge) return res.status(404).json({ error: "Badge introuvable" });
 
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: "Badge introuvable" });
-    }
-
-    console.log(`[${colors.green("OK")}] Badge supprimé : ${badge_id}`);
+    await badgesCollection.deleteOne({ badge_id });
+    await logAction({ action: "suppr_badge", badge_id, name: badge.name || "Inconnu", details: "Badge supprimé" });
     res.json({ message: "Badge supprimé" });
   } catch (error) {
     console.error(`[${colors.red("ERREUR")}] Suppression badge :`, error);
@@ -147,17 +144,12 @@ app.delete("/delete_badge", async (req, res) => {
 app.get("/badge", async (req, res) => {
   try {
     const { badge_id } = req.body;
-    if (!badge_id) {
-      return res.status(400).json({ error: "badge_id requis" });
-    }
+    if (!badge_id) return res.status(400).json({ error: "badge_id requis" });
 
     const badge = await badgesCollection.findOne({ badge_id });
+    if (!badge) return res.status(200).json({ error: "Badge introuvable" });
 
-    if (!badge) {
-      return res.status(200).json({ error: "Badge introuvable" });
-    }
-
-    console.log(`[${colors.green("OK")}] Badge récupéré : ${badge_id}`);
+    await logAction({ action: "consult_badge", badge_id, name: badge.name, details: "Consultation du badge" });
     res.json(badge);
   } catch (error) {
     console.error(`[${colors.red("ERREUR")}] Récupération badge :`, error);
@@ -165,19 +157,57 @@ app.get("/badge", async (req, res) => {
   }
 });
 
+async function seedDatabase() {
+  try {
+    const collections = await db.listCollections().toArray();
+    const hasLogs = collections.find(c => c.name === "logs");
+
+    if (!hasLogs) await db.createCollection("logs");
+    logsCollection = db.collection("logs");
+
+    const logsCount = await logsCollection.countDocuments();
+    if (logsCount === 0) {
+      await logsCollection.insertOne({
+        action: "test_log",
+        badge_id: "XYZ789",
+        name: "user_002",
+        date_heure: new Date().toISOString(),
+        details: "Log de test initial"
+      });
+    }
+  } catch (error) {
+    console.error(`[${colors.red("ERREUR")}] Seed database :`, error);
+  }
+}
+
 async function startServer() {
   try {
     await client.connect();
     db = client.db("badge-db");
     badgesCollection = db.collection("badges");
+    logsCollection = db.collection("logs");
 
     console.log(`[${colors.green("OK")}] Connecté à MongoDB !`);
+    await seedDatabase();
 
-    app.listen(3000, () =>
-      console.log(`[${colors.green("OK")}] Serveur lancé sur http://localhost:3000`)
-    );
+    if (MODE === "prod") {
+      const options = {
+        key: fs.readFileSync("/etc/letsencrypt/live/arduinoooo.lol/privkey.pem"),
+        cert: fs.readFileSync("/etc/letsencrypt/live/arduinoooo.lol/fullchain.pem")
+      };
+
+      const port = process.env.PORT || 443;
+      https.createServer(options, app).listen(port, () => {
+        console.log(`[${colors.green("OK")}] Serveur lancé en production sur https://arduinoooo.lol:${port}`);
+      });
+    } else {
+      const port = process.env.PORT || 3000;
+      app.listen(port, () => {
+        console.log(`[${colors.green("OK")}] Serveur lancé en dev sur http://localhost:${port}`);
+      });
+    }
   } catch (error) {
-    console.error(`[${colors.red("ERREUR")}] Connexion à MongoDB impossible`);
+    console.error(`[${colors.red("ERREUR")}] Connexion à MongoDB impossible`, error);
     process.exit(1);
   }
 }
