@@ -69,17 +69,30 @@ async function logAction({ action, badge_id, name, details }) {
   }
 }
 
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-  const user = users.find(u => u.username === username && u.password === password);
-  if (!user) return res.sendStatus(401);
-
-  const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, {
-    expiresIn: '1h'
-  });
-
-  res.json({ token });
-});
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    const user = users.find(u => u.username === username && u.password === password);
+    if (!user) return res.sendStatus(401);
+  
+    const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, {
+      expiresIn: '1h'
+    });
+  
+    console.log(`[${colors.green("JWT")}] Token généré pour '${username}' à ${new Date().toISOString()}`);
+  
+    try {
+      await logAction({
+        action: "connexion",
+        badge_id: null, 
+        name: username,
+        details: "Token JWT généré après login"
+      });
+    } catch (err) {
+      console.error(`[${colors.red("ERREUR")}] Échec de log de connexion`, err);
+    }
+  
+    res.json({ token });
+  });  
 
 app.use(authenticateToken);
 
