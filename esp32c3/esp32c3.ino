@@ -29,22 +29,31 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);
 WiFiClientSecure client;
 
 void setup() {
-  // Screen
+
+  // ------------------------------------- //
+  // --------------- Screen ---------------//
+  // ------------------------------------- //
+
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;);
   }
+
   display.clearDisplay();
 
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  // Ajouter un texte sous la barre de réseau
+
   String message = "Setup ESP";
   int textWidth = message.length() * 6; // Chaque caractère est de 6 pixels de large
   int cursorX = (SCREEN_WIDTH - textWidth) / 2; // Centrer le texte
   display.setCursor(cursorX, 20); // Déplacer le curseur à la position calculée
   display.println(message); // Afficher le texte
   display.display();
+
+  // ------------------------------------- //
+  // ---------------- Base ----------------//
+  // ------------------------------------- //
 
   pinMode(LEDV, OUTPUT);
   pinMode(LEDR, OUTPUT);
@@ -53,7 +62,10 @@ void setup() {
 
   Serial.begin(115200);
 
-  // Connection
+  // ------------------------------------- //
+  // ------------- Connection -------------//
+  // ------------------------------------- //
+
   WiFi.begin(ssid, password);
   Serial.print("Connexion au Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
@@ -66,7 +78,10 @@ void setup() {
   SPI.begin();
   mfrc522.PCD_Init();
 
-  // RFID
+  // ------------------------------------- //
+  // ---------------- RFID ----------------//
+  // ------------------------------------- //
+
   Serial.println(F("Performing RFID self-test..."));
   if (!mfrc522.PCD_PerformSelfTest()) {
     Serial.println(F("RFID Module DEFECT or UNKNOWN"));
@@ -76,8 +91,11 @@ void setup() {
   }
   Serial.println(F("RFID Module OK"));
 
-  display.println(clearmsg); // Afficher le texte
-  display.display();
+  // -------------------------------------- //
+  // ---------------- Clear ----------------//
+  // -------------------------------------- //
+
+  clear();
   Serial.println("-----------------------------------------");
   Serial.println("-----------------------------------------");
 }
@@ -99,7 +117,12 @@ void loop() {
 
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Wi-Fi non connecté !");
-    delay(500);
+    digitalWrite(LEDR, HIGH);
+    String message = "Error WIFI";
+    msg(message);
+    delay(1500);
+    clear();
+    digitalWrite(LEDR, LOW);
     return;
   }
 
@@ -120,7 +143,12 @@ void loop() {
   if (httpResponseCode <= 0) {
     Serial.println("Erreur d'envoi de la requête !");
     http.end();
-    delay(500);
+    digitalWrite(LEDR, HIGH);
+    String message = "Error envoi";
+    msg(message);
+    delay(1500);
+    clear();
+    digitalWrite(LEDR, LOW);
     return;
   }
 
@@ -138,7 +166,12 @@ void loop() {
 
   if (error) {
     Serial.println("Erreur de parsing JSON !");
-    delay(500);
+    digitalWrite(LEDR, HIGH);
+    String message = "Error JSON";
+    msg(message);
+    delay(1500);
+    clear();
+    digitalWrite(LEDR, LOW);
     return;
   }
 
@@ -154,7 +187,7 @@ void loop() {
     digitalWrite(LEDR, HIGH);
     delay(1500);
     digitalWrite(LEDR, LOW);
-    display.clearDisplay();
+    clear();
     return;
   }
   
@@ -175,5 +208,24 @@ void loop() {
   digitalWrite(LEDV, HIGH);
   delay(1500);
   digitalWrite(LEDV, LOW);
+  clear();
+}
+
+void clear(){
   display.clearDisplay();
+  String message = "";
+  int textWidth = message.length() * 6; // Chaque caractère est de 6 pixels de large
+  int cursorX = (SCREEN_WIDTH - textWidth) / 2; // Centrer le texte
+  display.setCursor(cursorX, 20); // Déplacer le curseur à la position calculée
+  display.println(message); // Afficher le texte
+  display.display();
+  display.clearDisplay();
+}
+
+void msg(String message){
+  int textWidth = message.length() * 6; // Chaque caractère est de 6 pixels de large
+  int cursorX = (SCREEN_WIDTH - textWidth) / 2; // Centrer le texte
+  display.setCursor(cursorX, 20); // Déplacer le curseur à la position calculée
+  display.println(message); // Afficher le texte
+  display.display();
 }
