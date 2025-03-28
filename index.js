@@ -160,16 +160,33 @@ app.post("/badge", async (req, res) => {
         if (!badge_id) return res.status(400).json({ error: "badge_id requis" });
 
         const badge = await badgesCollection.findOne({ badge_id });
-        if (!badge) return res.status(200).json({ error: "Badge introuvable" });
 
+        // On supprime d'abord tous les anciens badges
         await lastBadgeCollection.deleteMany({});
 
+        if (!badge) {
+            // Si le badge n'existe pas, on stocke juste son ID avec une date
+            await lastBadgeCollection.insertOne({
+                badge_id,
+                error: "Badge introuvable",
+                createdAt: new Date()
+            });
+            return res.status(200).json({ error: "Badge introuvable" });
+        }
+
+        // Sinon on insère le badge complet
         await lastBadgeCollection.insertOne({
             ...badge,
             createdAt: new Date()
         });
 
-        await logAction({ action: "consult_badge", badge_id, name: badge.name, details: "Consultation du badge" });
+        await logAction({
+            action: "consult_badge",
+            badge_id,
+            name: badge.name,
+            details: "Consultation du badge"
+        });
+
         res.json(badge);
     } catch (error) {
         console.error(`[${colors.red("ERREUR")}] Récupération badge :`, error);
