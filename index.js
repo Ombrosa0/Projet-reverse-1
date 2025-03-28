@@ -75,7 +75,7 @@ app.post('/login', async (req, res) => {
     if (!user) return res.sendStatus(401);
   
     const token = jwt.sign({ username: user.username }, process.env.JWT_SECRET, {
-      expiresIn: '1h'
+      expiresIn: '2h'
     });
   
     console.log(`[${colors.green("JWT")}] Token généré pour '${username}' à ${new Date().toISOString()}`);
@@ -170,29 +170,6 @@ app.get("/badge", async (req, res) => {
   }
 });
 
-async function seedDatabase() {
-  try {
-    const collections = await db.listCollections().toArray();
-    const hasLogs = collections.find(c => c.name === "logs");
-
-    if (!hasLogs) await db.createCollection("logs");
-    logsCollection = db.collection("logs");
-
-    const logsCount = await logsCollection.countDocuments();
-    if (logsCount === 0) {
-      await logsCollection.insertOne({
-        action: "test_log",
-        badge_id: "XYZ789",
-        name: "user_002",
-        date_heure: new Date().toISOString(),
-        details: "Log de test initial"
-      });
-    }
-  } catch (error) {
-    console.error(`[${colors.red("ERREUR")}] Seed database :`, error);
-  }
-}
-
 async function startServer() {
   try {
     await client.connect();
@@ -201,7 +178,6 @@ async function startServer() {
     logsCollection = db.collection("logs");
 
     console.log(`[${colors.green("OK")}] Connecté à MongoDB !`);
-    await seedDatabase();
 
     if (MODE === "prod") {
       const options = {
