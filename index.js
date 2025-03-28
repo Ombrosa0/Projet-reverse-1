@@ -161,11 +161,9 @@ app.post("/badge", async (req, res) => {
 
         const badge = await badgesCollection.findOne({ badge_id });
 
-        // On supprime d'abord tous les anciens badges
         await lastBadgeCollection.deleteMany({});
 
         if (!badge) {
-            // Si le badge n'existe pas, on stocke juste son ID avec une date
             await lastBadgeCollection.insertOne({
                 badge_id,
                 error: "Badge introuvable",
@@ -211,11 +209,11 @@ async function startServer() {
         db = client.db("badge-db");
         lastBadgeCollection = db.collection("last_badge");
 
-        // try {
-        //     await lastBadgeCollection.createIndex({ createdAt: 1 }, { expireAfterSeconds: 30 });
-        // } catch (err) {
-        //     console.warn(`[${colors.yellow("WARN")}] Impossible de créer l'index TTL`, err);
-        // }
+        try {
+            await lastBadgeCollection.createIndex({ createdAt: 1 }, { expireAfterSeconds: 30 });
+        } catch (err) {
+            console.warn(`[${colors.yellow("WARN")}] Impossible de créer l'index TTL`, err);
+        }
 
         badgesCollection = db.collection("badges");
         logsCollection = db.collection("logs");
