@@ -8,10 +8,20 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "time.h"
 
 const char* ssid = "RouteurCadeau";
 const char* password = "CadeauRouteur";
-const char* serverUrl = "https://arduinoooo.lol/badge";  // URL API HTTPS
+const char* serverUrl = "https://arduinoooo.lol/badge";
+const char* serverLogin = "https://arduinoooo.lol/login";
+
+// Serveur NTP
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = 0; // UTC (pas d'offset)
+const int daylightOffset_sec = 0; // Pas d'heure d'été pour UTC
+const int Time = 0;
+
+String jwtToken = "";
 
 #define RST_PIN 3
 #define SS_PIN 20
@@ -98,6 +108,8 @@ void setup() {
   clear();
   Serial.println("-----------------------------------------");
   Serial.println("-----------------------------------------");
+
+  getTime();
 }
 
 void loop() {
@@ -126,9 +138,11 @@ void loop() {
     return;
   }
 
+  getTokenJWT();
   HTTPClient http;
   http.begin(client, serverUrl);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", "Bearer " + jwtToken);
 
   StaticJsonDocument<200> jsonDoc;
   jsonDoc["badge_id"] = uidString;
@@ -137,8 +151,8 @@ void loop() {
   //Serial.println("Données envoyées : " + jsonString);
 
   int httpResponseCode = http.POST(jsonString);
-  Serial.print("Réponse HTTP: ");
-  Serial.println(httpResponseCode);
+  //Serial.print("Réponse HTTP: ");
+  //Serial.println(httpResponseCode);
 
   if (httpResponseCode <= 0) {
     Serial.println("Erreur d'envoi de la requête !");
@@ -206,7 +220,7 @@ void loop() {
   Serial.println(niveau);
   Serial.println("-----------------------------------------");
   digitalWrite(LEDV, HIGH);
-  delay(1500);
+  delay(2000);
   digitalWrite(LEDV, LOW);
   clear();
 }
@@ -228,4 +242,57 @@ void msg(String message){
   display.setCursor(cursorX, 20); // Déplacer le curseur à la position calculée
   display.println(message); // Afficher le texte
   display.display();
+}
+
+void getTime(){
+  // Synchronisation avec le serveur NTP
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) {
+    Serial.println("Erreur de récupération de l'heure !");
+    return;
+  }
+
+  // Récupérer le timestamp UNIX
+  time_t now = mktime(&timeinfo);
+  
+  // Affichage du timestamp UNIX
+  Serial.print("Timestamp UNIX : ");
+  Serial.println(now);
+  int Time = now;
+}
+
+void getTokenJWT() {
+  HTTPClient http;
+  http.begin(client, serverLogin);
+  http.addHeader("Content-Type", "application/json");
+
+  StaticJsonDocument<200> jsonDoc;
+  jsonDoc["username"] = "admin";
+  jsonDoc["password"] = "admin123";
+  String jsonString;
+  serializeJson(jsonDoc, jsonString);
+
+  int httpResponseCode = http.POST(jsonString);
+  //Serial.print("Réponse HTTP (login) : ");
+  //Serial.println(httpResponseCode);
+
+  if (httpResponseCode != 200) {
+    Serial.println(http.getString());
+    http.end();
+    return;
+  }
+
+  String response = http.getString();
+  http.end();
+
+  StaticJsonDocument<512> resDoc;
+  DeserializationError error = deserializeJson(resDoc, response);
+  if (error || !resDoc.containsKey("token")) {
+    Serial.println("Erreur parsing JSON ou token absent");
+    return;
+  }
+
+  jwtToken = resDoc["token"].as<String>();
 }
