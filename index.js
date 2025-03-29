@@ -220,22 +220,11 @@ async function startServer() {
 
         console.log(`[${colors.green("OK")}] Connecté à MongoDB !`);
 
-        if (MODE === "prod") {
-            const options = {
-                key: fs.readFileSync("/etc/letsencrypt/live/arduinoooo.lol/privkey.pem"),
-                cert: fs.readFileSync("/etc/letsencrypt/live/arduinoooo.lol/fullchain.pem")
-            };
-
-            const port = process.env.PORT || 443;
-            https.createServer(options, app).listen(port, () => {
-                console.log(`[${colors.green("OK")}] Serveur lancé en production sur https://arduinoooo.lol:${port}`);
-            });
-        } else {
-            const port = process.env.PORT || 3000;
-            app.listen(port, () => {
-                console.log(`[${colors.green("OK")}] Serveur lancé en dev sur http://localhost:${port}`);
-            });
-        }
+        const port = process.env.PORT || 3000;
+        app.listen(port, () => {
+            console.log(`[${colors.green("OK")}] Serveur lancé en mode ${MODE} sur le port ${port}`);
+        });
+        
     } catch (error) {
         console.error(`[${colors.red("ERREUR")}] Connexion à MongoDB impossible`, error);
         process.exit(1);
