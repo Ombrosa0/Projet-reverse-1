@@ -53,11 +53,12 @@ function authenticateToken(req, res, next) {
     });
 }
 
-async function logAction({ action, badge_id, name, details }) {
+async function logAction({ action, badge_id, name, level = null, details }) {
     const log = {
         action,
         badge_id,
         name,
+        level,
         date_heure: new Date().toISOString(),
         details
     };
@@ -103,7 +104,7 @@ app.post("/create_badge", async (req, res) => {
 
         const newBadge = { badge_id, level, name, created_at: new Date(), updated_at: new Date() };
         await badgesCollection.insertOne(newBadge);
-        await logAction({ action: "ajout_badge", badge_id, name, details: `Badge ajouté avec niveau ${level}` });
+        await logAction({ action: "ajout_badge", badge_id, name, level, details: `Badge ajouté avec niveau ${level}` });
         res.status(201).json({ message: "Badge créé", badge: newBadge });
     } catch (error) {
         console.error(`[${colors.red("ERREUR")}] Création du badge :`, error);
@@ -129,7 +130,7 @@ app.put("/modif_badge", async (req, res) => {
         const result = await badgesCollection.updateOne({ badge_id }, { $set: { level, name, updated_at: new Date() } });
         if (result.matchedCount === 0) return res.status(404).json({ error: "Badge introuvable" });
 
-        await logAction({ action: "modif_badge", badge_id, name, details: `Badge modifié au niveau ${level}` });
+        await logAction({ action: "modif_badge", badge_id, name, level, details: `Badge modifié au niveau ${level}` });
         res.json({ message: "Badge mis à jour" });
     } catch (error) {
         console.error(`[${colors.red("ERREUR")}] Modification badge :`, error);
@@ -146,7 +147,7 @@ app.delete("/delete_badge", async (req, res) => {
         if (!badge) return res.status(404).json({ error: "Badge introuvable" });
 
         await badgesCollection.deleteOne({ badge_id });
-        await logAction({ action: "suppr_badge", badge_id, name: badge.name || "Inconnu", details: "Badge supprimé" });
+        await logAction({ action: "suppr_badge", badge_id, level: badge.level || null, name: badge.name || "Inconnu", details: "Badge supprimé" });
         res.json({ message: "Badge supprimé" });
     } catch (error) {
         console.error(`[${colors.red("ERREUR")}] Suppression badge :`, error);
@@ -182,6 +183,7 @@ app.post("/badge", async (req, res) => {
             action: "consult_badge",
             badge_id,
             name: badge.name,
+            level,
             details: "Consultation du badge"
         });
 
@@ -239,7 +241,7 @@ async function startServer() {
         app.listen(port, () => {
             console.log(`[${colors.green("OK")}] Serveur lancé en mode ${MODE} sur le port ${port}`);
         });
-        
+
     } catch (error) {
         console.error(`[${colors.red("ERREUR")}] Connexion à MongoDB impossible`, error);
         process.exit(1);
