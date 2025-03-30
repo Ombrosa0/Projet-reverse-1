@@ -8,10 +8,40 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "time.h"
+#include <base64.h>
+#include "mbedtls/base64.h"
+
+String base64Decode(String input) {
+    size_t outputLength;
+    uint8_t decoded[512];  // Ajuste la taille selon tes besoins
+    int ret = mbedtls_base64_decode(decoded, sizeof(decoded), &outputLength, 
+                                    (const unsigned char*)input.c_str(), input.length());
+
+    if (ret != 0) {
+        Serial.println("Erreur de décodage Base64 !");
+        return "";
+    }
+    
+    return String((char*)decoded);
+}
+
 
 const char* ssid = "RouteurCadeau";
 const char* password = "CadeauRouteur";
-const char* serverUrl = "https://arduinoooo.lol/badge";  // URL API HTTPS
+const char* serverUrl = "https://arduinoooo.lol/badge";
+const char* serverLogin = "https://arduinoooo.lol/login";
+int expToken = 0;
+
+// Serveur NTP
+const char* ntpServer = "pool.ntp.org";
+const long gmtOffset_sec = 0;
+const int daylightOffset_sec = 0;
+
+time_t currentTime;
+unsigned long lastMillis;
+
+String jwtToken = "";
 
 #define RST_PIN 3
 #define SS_PIN 20
@@ -91,16 +121,31 @@ void setup() {
   }
   Serial.println(F("RFID Module OK"));
 
-  // -------------------------------------- //
-  // ---------------- Clear ----------------//
-  // -------------------------------------- //
+  // ------------------------------------- //
+  // -------------- Fonction --------------//
+  // ------------------------------------- //
 
+  Serial.println("Get time...");
+  updateTime();
+  Serial.println("Get JWT token...");
+  getTokenJWT();
+
+  Serial.println("-----------------------------------------");
+  Serial.println("-----------------------------------------");
   clear();
-  Serial.println("-----------------------------------------");
-  Serial.println("-----------------------------------------");
 }
 
 void loop() {
+  time_t elapsedSeconds = (millis() - lastMillis) / 1000;
+  time_t adjustedTime = currentTime + elapsedSeconds;
+  if (adjustedTime > expToken){
+    Serial.println(String(adjustedTime) + ">" + String(expToken));
+    msg("Please wait");
+    getTokenJWT();
+    clear();
+  }
+
+
   if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) return;
 
   //Serial.print(F("Carte détectée ! UID : "));
@@ -129,6 +174,7 @@ void loop() {
   HTTPClient http;
   http.begin(client, serverUrl);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", "Bearer " + jwtToken);
 
   StaticJsonDocument<200> jsonDoc;
   jsonDoc["badge_id"] = uidString;
@@ -137,8 +183,8 @@ void loop() {
   //Serial.println("Données envoyées : " + jsonString);
 
   int httpResponseCode = http.POST(jsonString);
-  Serial.print("Réponse HTTP: ");
-  Serial.println(httpResponseCode);
+  //Serial.print("Réponse HTTP: ");
+  //Serial.println(httpResponseCode);
 
   if (httpResponseCode <= 0) {
     Serial.println("Erreur d'envoi de la requête !");
@@ -206,20 +252,14 @@ void loop() {
   Serial.println(niveau);
   Serial.println("-----------------------------------------");
   digitalWrite(LEDV, HIGH);
-  delay(1500);
+  delay(2000);
   digitalWrite(LEDV, LOW);
   clear();
 }
 
 void clear(){
   display.clearDisplay();
-  String message = "";
-  int textWidth = message.length() * 6; // Chaque caractère est de 6 pixels de large
-  int cursorX = (SCREEN_WIDTH - textWidth) / 2; // Centrer le texte
-  display.setCursor(cursorX, 20); // Déplacer le curseur à la position calculée
-  display.println(message); // Afficher le texte
   display.display();
-  display.clearDisplay();
 }
 
 void msg(String message){
@@ -228,4 +268,94 @@ void msg(String message){
   display.setCursor(cursorX, 20); // Déplacer le curseur à la position calculée
   display.println(message); // Afficher le texte
   display.display();
+}
+
+void updateTime() {
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        Serial.println("Erreur de r\xE9cup\xE9ration de l'heure !");
+        return;
+    }
+    currentTime = mktime(&timeinfo);
+    lastMillis = millis();
+}
+
+void getTokenJWT() {
+  HTTPClient http;
+  http.begin(client, serverLogin);
+  http.addHeader("Content-Type", "application/json");
+
+  StaticJsonDocument<200> jsonDoc;
+  jsonDoc["username"] = "admin";
+  jsonDoc["password"] = "admin123";
+  String jsonString;
+  serializeJson(jsonDoc, jsonString);
+
+  int httpResponseCode = http.POST(jsonString);
+  //Serial.print("Réponse HTTP (login) : ");
+  //Serial.println(httpResponseCode);
+
+  if (httpResponseCode != 200) {
+    Serial.println(http.getString());
+    http.end();
+    return;
+  }
+
+  String response = http.getString();
+  http.end();
+
+  StaticJsonDocument<512> resDoc;
+  DeserializationError error = deserializeJson(resDoc, response);
+  if (error || !resDoc.containsKey("token")) {
+    Serial.println("Erreur parsing JSON ou token absent");
+    return;
+  }
+
+  jwtToken = resDoc["token"].as<String>();
+
+  // --------------------------------------- //
+  // -------------- Get exp date ------------//
+  // --------------------------------------- //
+
+  String decoded = decodeJWT(jwtToken);
+  if (decoded == "") {
+    Serial.println("Can't decode JWT Token");
+  }
+  
+  Serial.println("Payload JWT décodé : " + decoded);
+  StaticJsonDocument<512> doc;
+  DeserializationError jwtError = deserializeJson(doc, decoded);
+
+  if (jwtError) {
+    Serial.println("Erreur de parsing JSON !");
+  }
+
+  Serial.print("exp date : ");
+  Serial.println(doc["exp"].as<String>());
+  expToken = doc["exp"].as<int>();
+
+}
+
+
+// Fonction pour décoder un JWT
+String decodeJWT(String jwt) {
+    int firstDot = jwt.indexOf('.');
+    int secondDot = jwt.indexOf('.', firstDot + 1);
+
+    if (firstDot == -1 || secondDot == -1) {
+        Serial.println("JWT invalide !");
+        return "";
+    }
+
+    String payloadBase64 = jwt.substring(firstDot + 1, secondDot);  // Extraction du payload
+    payloadBase64.replace('-', '+');  // Correction Base64URL → Base64
+    payloadBase64.replace('_', '/');
+
+    while (payloadBase64.length() % 4 != 0) {
+        payloadBase64 += '=';  // Ajout du padding si nécessaire
+    }
+
+    String decodedPayload = base64Decode(payloadBase64);  // Décodage Base64
+    return decodedPayload;
 }
