@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Badge</title>
+    <link rel="stylesheet" href="./src/css/main.css"> 
+    <link rel="stylesheet" href="./src/css/all-badge.css">
+    <script src="./src/js/all-badge.js" defer></script>
+</head>
+
+<body>
+    <button id="logout" class="logout-fixed btn">Déconnexion</button>
+
+    <div class="container">
+        <div class="header">
+            <h1>Panel admin gestion d'accès</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="./index.html">Accueil</a></li>
+                <li><a href="./all-badge.html">Badges</a></li>
+                <li><a href="./logs.html">Logs</a></li>
+            </ul>
+        </nav>
+
+        <div class="content">
+            <div class="content-badge">
+                <div class="titre-content-badge">
+                    <h2>Badges existants :</h2>
+                </div>
+                <div class="content-all-badge" id="badges-container">
+                    <!-- badges ici -->
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

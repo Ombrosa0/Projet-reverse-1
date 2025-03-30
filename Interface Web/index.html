@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel admin gestion d'accès</title>
+    <link rel="stylesheet" href="./src/css/main.css">
+    <script src="./src/js/index.js" defer></script>
+</head>
+
+<body>
+    <button id="logout" class="logout-fixed btn">Déconnexion</button>
+
+    <div class="container">
+        <div class="header">
+            <h1>Panel admin gestion d'accès</h1>
+        </div>
+
+        <div class="nav-wrapper">
+            <nav>
+                <ul>
+                    <li><a href="./index.html">Accueil</a></li>
+                    <li><a href="./all-badge.html">Badges</a></li>
+                    <li><a href="./logs.html">Logs</a></li>
+                </ul>
+            </nav>
+        </div>
+
+        <div class="content">
+            <div class="content-badge">
+                <div class="titre-content-badge">
+                    <h2>Gestion des badges</h2>
+                </div>
+                <div class="content-all-badge">
+                    <div class="creation-badge">
+                        <button class="btn" onclick="showSection('section1')">Création badge</button>
+                    </div>
+                    <div class="modif-badge">
+                        <button class="btn" onclick="showSection('section2')">Supprimer un badge</button>   
+                    </div>
+                    <div class="delete-badge">
+                        <button class="btn" onclick="showSection('section3')">Modifier un badge déjà présent</button>
+                    </div>
+                    <div class="all-badge">
+                        <a href="./all-badge.html" class="btn">Voir tous les badges existants</a>
+                    </div>
+                </div>
+
+                <div id="section1" class="section">
+                    <form id="badgeForm">
+                        <label for="badge_uid">UID du badge :</label>
+                        <input type="text" id="badge_uid" name="badge_uid" readonly>
+
+                        <label for="badge_id">ID du badge :</label>
+                        <input type="text" id="badge_id" name="badge_id" required>
+
+                        <label for="name">Nom de l'utilisateur :</label>
+                        <input type="text" id="name" name="name" required>
+
+                        <label for="level">Type de badge :</label>
+                        <input type="text" id="level" name="level" required>
+                    <div class="btn-group">
+                        <button class="btn" type="submit">Ajouter</button>
+                        <button class="btn" type="button" id="refreshBadgeBtn">Rafraîchir UID</button>
+                    </div>
+                    </form>
+                </div>
+
+                <div id="section2" class="section">
+                    <form id="deleteBadgeForm">
+                        <label for="delete_badge_id">ID du badge :</label>
+                        <input type="text" id="delete_badge_id" name="delete_badge_id" required>
+                    <div class="btn-group">
+                        <button class="btn" type="submit">Supprimer</button>
+                    </div>
+                    </form>
+                </div>
+
+                <div id="section3" class="section">
+                    <form id="updateBadgeForm">
+                        <label for="update_badge_id">ID du badge :</label>
+                        <input type="text" id="update_badge_id" name="update_badge_id" required>
+
+                        <label for="update_name">Nom de l'utilisateur :</label>
+                        <input type="text" id="update_name" name="update_name" required>
+
+                        <label for="update_badgeLevel">Type de badge :</label>
+                        <input type="text" id="update_badgeLevel" name="update_badgeLevel" required>
+                    <div class="btn-group">
+                        <button class="btn" type="submit">Modifier</button>
+                    </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="content-logs">
+                <div class="titre-content-logs">
+                    <h2>Suivi des Logs</h2>
+                </div>
+
+                <div class="preview-log">   
+                    <h3>Logs</h3>
+                    <section id="preview-log-list">
+                        <!-- Logs ici -->
+                    </section>
+                    <div class="log-complet">
+                        <a href="./logs.html">En voir plus ....</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> 
+</body>
+<script src="./src/js/script.js" defer></script>
+</html>

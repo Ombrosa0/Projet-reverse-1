@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Logs</title>
+    <link rel="stylesheet" href="./src/css/logs.css">  
+    <script src="./src/js/logs.js" defer></script>
+</head>
+
+<body>
+    <button id="logout" class="logout-fixed btn">Déconnexion</button>
+
+    <div class="container">
+        <div class="header">
+            <h1>Panel admin gestion d'accès</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="./index.html">Accueil</a></li>
+                <li><a href="./all-badge.html">Badges</a></li>
+                <li><a href="./logs.html">Logs</a></li>
+            </ul>
+        </nav>
+
+        <h1>Logs d'accès</h1>
+        <table id="logsTable" class="logsTable">
+            <thead>
+                <tr>
+                    <th>Date et Heure</th>
+                    <th>Action</th>
+                    <th>Badge ID</th>
+                    <th>Nom</th>
+                    <th>Détails</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Les logs s'afficheront ici -->
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
