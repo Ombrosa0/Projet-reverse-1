@@ -203,6 +203,21 @@ app.get("/last_badge", async (req, res) => {
     }
 });
 
+app.get("/logs", async (req, res) => {
+    try {
+        const logs = await logsCollection
+            .find()
+            .sort({ date_heure: -1 })
+            .limit(50)
+            .toArray();
+
+        res.json(logs);
+    } catch (error) {
+        console.error(`[${colors.red("ERREUR")}] Récupération logs :`, error);
+        res.status(500).json({ error: "Erreur serveur lors de la récupération des logs" });
+    }
+});
+
 async function startServer() {
     try {
         await client.connect();
