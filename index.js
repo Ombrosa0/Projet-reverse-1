@@ -169,10 +169,16 @@ app.post("/badge", async (req, res) => {
                 error: "Badge introuvable",
                 createdAt: new Date()
             });
+
+            await logAction({
+                action: "consult_badge_inconnu",
+                badge_id,
+                name: "Inconnu",
+                details: "Consultation d'un badge inconnu"
+            });
             return res.status(200).json({ error: "Badge introuvable" });
         }
 
-        // Sinon on insère le badge complet
         await lastBadgeCollection.insertOne({
             ...badge,
             createdAt: new Date()
