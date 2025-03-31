@@ -47,11 +47,9 @@
 
                 <div id="section1" class="section">
                     <form id="badgeForm">
-                        <label for="badge_uid">UID du badge :</label>
-                        <input type="text" id="badge_uid" name="badge_uid" readonly>
 
                         <label for="badge_id">ID du badge :</label>
-                        <input type="text" id="badge_id" name="badge_id" required>
+                        <input type="text" id="badge_id" name="badge_id" required readonly>
 
                         <label for="name">Nom de l'utilisateur :</label>
                         <input type="text" id="name" name="name" required>
@@ -60,7 +58,7 @@
                         <input type="text" id="level" name="level" required>
                     <div class="btn-group">
                         <button class="btn" type="submit">Ajouter</button>
-                        <button class="btn" type="button" id="refreshBadgeBtn">Rafraîchir UID</button>
+                        <button class="btn" type="button" id="refreshCreateBtn">Rafraîchir UID</button>
                     </div>
                     </form>
                 </div>
@@ -71,6 +69,7 @@
                         <input type="text" id="delete_badge_id" name="delete_badge_id" required>
                     <div class="btn-group">
                         <button class="btn" type="submit">Supprimer</button>
+                        <button class="btn" type="button" id="refreshDeleteBtn">Rafraîchir UID</button>
                     </div>
                     </form>
                 </div>
@@ -87,6 +86,7 @@
                         <input type="text" id="update_badgeLevel" name="update_badgeLevel" required>
                     <div class="btn-group">
                         <button class="btn" type="submit">Modifier</button>
+                        <button class="btn" type="button" id="refreshModifBtn">Rafraîchir UID</button>
                     </div>
                     </form>
                 </div>
