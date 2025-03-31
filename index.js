@@ -1,3 +1,6 @@
+// ──────────────────────────────
+// IMPORTS
+// ──────────────────────────────
 const express = require("express");
 const dotenv = require("dotenv").config();
 const https = require("https");
@@ -10,12 +13,18 @@ const morgan = require("morgan");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 
+// ──────────────────────────────
+// GLOBAL CONFIGURATION
+// ──────────────────────────────
 if (!process.env.JWT_SECRET) {
     console.error("ERREUR : JWT_SECRET n'est pas défini dans le fichier .env");
     process.exit(1);
 }
 
 const MODE = process.env.MODE || "dev";
+const PORT = process.env.PORT || 3000;
+const MONGO_URI = process.env.MONGODB_URI || "mongodb+srv://cmendesdasilva:tdHvwsn2mVKtDGCk@badge-db.foqirp2.mongodb.net/?retryWrites=true&w=majority&appName=badge-db";
+
 const app = express();
 app.use(bodyParser.json());
 app.use(morgan("dev"));
@@ -25,8 +34,10 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-const uri = process.env.MONGODB_URI || "mongodb+srv://cmendesdasilva:tdHvwsn2mVKtDGCk@badge-db.foqirp2.mongodb.net/?retryWrites=true&w=majority&appName=badge-db";
-const client = new MongoClient(uri, {
+// ──────────────────────────────
+// DATABASE
+// ──────────────────────────────
+const client = new MongoClient(MONGO_URI, {
     serverApi: {
         version: ServerApiVersion.v1,
         strict: true,
@@ -35,12 +46,18 @@ const client = new MongoClient(uri, {
     connectTimeoutMS: 5000,
 });
 
-let db, badgesCollection, logsCollection;
+let db, badgesCollection, logsCollection, lastBadgeCollection;
 
+// ──────────────────────────────
+// CREDENTIALS
+// ──────────────────────────────
 const users = [
     { username: 'admin', password: 'admin123' }
 ];
 
+// ──────────────────────────────
+// JWT TOKEN
+// ──────────────────────────────
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader?.split(' ')[1];
@@ -53,6 +70,9 @@ function authenticateToken(req, res, next) {
     });
 }
 
+// ──────────────────────────────
+// LOGS
+// ──────────────────────────────
 async function logAction({ action, badge_id, name, level = null, details }) {
     const log = {
         action,
@@ -70,6 +90,9 @@ async function logAction({ action, badge_id, name, level = null, details }) {
     }
 }
 
+// ──────────────────────────────
+// JWT LOGIN
+// ──────────────────────────────
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const user = users.find(u => u.username === username && u.password === password);
@@ -95,12 +118,16 @@ app.post('/login', async (req, res) => {
     res.json({ token });
 });
 
+// ──────────────────────────────
+//  ROUTES
+// ──────────────────────────────
 app.use(authenticateToken);
 
 app.post("/create_badge", async (req, res) => {
     try {
         const { badge_id, level, name } = req.body;
-        if (!badge_id || !level || !name) return res.status(400).json({ error: "badge_id, level et name sont requis" });
+        if (!badge_id || !level || !name)
+            return res.status(400).json({ error: "badge_id, level et name sont requis" });
 
         const newBadge = { badge_id, level, name, created_at: new Date(), updated_at: new Date() };
         await badgesCollection.insertOne(newBadge);
@@ -125,10 +152,16 @@ app.get("/badgesall", async (req, res) => {
 app.put("/modif_badge", async (req, res) => {
     try {
         const { badge_id, level, name } = req.body;
-        if (!badge_id || !level || !name) return res.status(400).json({ error: "badge_id, level et name sont requis" });
+        if (!badge_id || !level || !name)
+            return res.status(400).json({ error: "badge_id, level et name sont requis" });
 
-        const result = await badgesCollection.updateOne({ badge_id }, { $set: { level, name, updated_at: new Date() } });
-        if (result.matchedCount === 0) return res.status(404).json({ error: "Badge introuvable" });
+        const result = await badgesCollection.updateOne(
+            { badge_id },
+            { $set: { level, name, updated_at: new Date() } }
+        );
+
+        if (result.matchedCount === 0)
+            return res.status(404).json({ error: "Badge introuvable" });
 
         await logAction({ action: "modif_badge", badge_id, name, level, details: `Badge modifié au niveau ${level}` });
         res.json({ message: "Badge mis à jour" });
@@ -147,7 +180,14 @@ app.delete("/delete_badge", async (req, res) => {
         if (!badge) return res.status(404).json({ error: "Badge introuvable" });
 
         await badgesCollection.deleteOne({ badge_id });
-        await logAction({ action: "suppr_badge", badge_id, level: badge.level || null, name: badge.name || "Inconnu", details: "Badge supprimé" });
+        await logAction({
+            action: "suppr_badge",
+            badge_id,
+            level: badge.level || null,
+            name: badge.name || "Inconnu",
+            details: "Badge supprimé"
+        });
+
         res.json({ message: "Badge supprimé" });
     } catch (error) {
         console.error(`[${colors.red("ERREUR")}] Suppression badge :`, error);
@@ -177,13 +217,11 @@ app.post("/badge", async (req, res) => {
                 name: "Inconnu",
                 details: "Consultation d'un badge inconnu"
             });
+
             return res.status(200).json({ error: "Badge introuvable" });
         }
 
-        await lastBadgeCollection.insertOne({
-            ...badge,
-            createdAt: new Date()
-        });
+        await lastBadgeCollection.insertOne({ ...badge, createdAt: new Date() });
 
         await logAction({
             action: "consult_badge",
@@ -226,6 +264,9 @@ app.get("/logs", async (req, res) => {
     }
 });
 
+// ──────────────────────────────
+//  START SERVER
+// ──────────────────────────────
 async function startServer() {
     try {
         await client.connect();
@@ -243,9 +284,8 @@ async function startServer() {
 
         console.log(`[${colors.green("OK")}] Connecté à MongoDB !`);
 
-        const port = process.env.PORT || 3000;
-        app.listen(port, () => {
-            console.log(`[${colors.green("OK")}] Serveur lancé en mode ${MODE} sur le port ${port}`);
+        app.listen(PORT, () => {
+            console.log(`[${colors.green("OK")}] Serveur lancé en mode ${MODE} sur le port ${PORT}`);
         });
 
     } catch (error) {
