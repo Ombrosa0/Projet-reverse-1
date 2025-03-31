@@ -183,7 +183,7 @@ app.post("/badge", async (req, res) => {
             action: "consult_badge",
             badge_id,
             name: badge.name,
-            level,
+            badge: badge.level,
             details: "Consultation du badge"
         });
 
