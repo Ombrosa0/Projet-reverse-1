@@ -47,6 +47,7 @@ function renderLogs() {
     row.classList.add(`log-${log.action}`);
     row.innerHTML = `
         <td>${formatDate(log.date_heure)}</td>
+        <td>${log.action}</td>
         <td>${log.badge_id || '–'}</td>
         <td>${log.name || '–'}</td>
         <td>${log.details || '–'}</td>

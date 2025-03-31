@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (logoutBtn) {
         logoutBtn.addEventListener("click", function () {
             localStorage.removeItem('jwtToken');
-            window.location.href = './login.html'; 
+            window.location.href = './login.html'; // ou autre selon ta page
         });
     }
 });
@@ -31,7 +31,7 @@ async function fetchBadges() {
             } else {
                 badges.forEach(badge => {
                     const badgeElement = document.createElement("div");
-                    badgeElement.classList.add("badge-card"); 
+                    badgeElement.classList.add("badge-card"); // Utilise la classe stylée
 
                     badgeElement.innerHTML = `
                         <h3>Badge ID : ${badge.badge_id}</h3>

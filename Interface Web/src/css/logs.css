@@ -165,10 +165,6 @@ h1 {
   background-color: #f0f4ff; 
 }
 
-.log-consult_badge_inconnu {
-  background-color: #f5e8d0;  
-}
-
 .logsTable tr:hover {
   filter: brightness(0.98);
 }

@@ -1,8 +1,8 @@
-let isFetching = false; 
+let isFetching = false; // Pour empêcher les requêtes multiples
 
-// Fonction pour récupérer le dernier badge_id
+// Fonction pour récupérer le dernier badge
 async function fetchLastBadge() {
-    if (isFetching) return; 
+    if (isFetching) return; // Empêche les appels multiples
     isFetching = true;
 
     const token = localStorage.getItem('jwtToken');
@@ -17,29 +17,28 @@ async function fetchLastBadge() {
         });
 
         const result = await response.json();
-        console.log(result); 
+        console.log(result);
 
         if (response.ok) {
-            const badge_id = result.badge_id; 
-            if (badge_id) {
-                console.log(`Badge ID récupéré: ${badge_id}`);
-                document.getElementById("badge_id").value = badge_id; 
+            const badgeId = result._id;
+            if (badgeId) {
+                console.log(`Badge _id récupéré: ${badgeId}`);
+                document.getElementById("badge_uid").value = badgeId;
             } else {
                 console.log("Aucun badge trouvé.");
-                document.getElementById("badge_id").value = 'Aucun badge trouvé';
+                document.getElementById("badge_uid").value = 'Aucun badge trouvé';
             }
         } else {
             console.error("Erreur : Impossible de récupérer le dernier badge.");
-            document.getElementById("badge_id").value = 'Erreur de récupération';
+            document.getElementById("badge_uid").value = 'Erreur de récupération';
         }
     } catch (error) {
         console.error("Erreur lors de la récupération du dernier badge :", error);
-        document.getElementById("badge_id").value = 'Erreur de connexion';
+        document.getElementById("badge_uid").value = 'Erreur de connexion';
     } finally {
         isFetching = false;
     }
 }
-
 
 // Lors du chargement de la page
 document.addEventListener("DOMContentLoaded", function () {
