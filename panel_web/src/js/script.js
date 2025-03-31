@@ -1,8 +1,7 @@
 let isFetching = false;
 
-// Fonction pour récupérer le dernier badge_id
 async function fetchLastBadge() {
-    if (isFetching) return; // Empêche les appels multiples
+    if (isFetching) return;
     isFetching = true;
 
     const token = localStorage.getItem('jwtToken');
@@ -19,17 +18,30 @@ async function fetchLastBadge() {
         const result = await response.json();
         console.log("Réponse API /last_badge :", result); // Debug
 
-        const badgeId = response.ok && result.badge_id ? result.badge_id : "Aucun badge trouvé";
+        if (response.ok && result.badge_id) {
+            const { badge_id, name, level } = result;
 
-        ["badge_id", "delete_badge_id", "update_badge_id"].forEach(id => {
-            const input = document.getElementById(id);
-            if (input) input.value = badgeId;
-        });
+            // Met à jour les champs de formulaire
+            document.getElementById("badge_id").value = badge_id;
+            document.getElementById("delete_badge_id").value = badge_id;
+            document.getElementById("update_badge_id").value = badge_id;
 
+            // Pré-remplit les champs de modification
+            document.getElementById("update_name").value = name || "";
+            document.getElementById("update_badgeLevel").value = level || "";
+
+        } else {
+            console.log("Aucun badge trouvé ou erreur API.");
+
+            ["badge_id", "delete_badge_id", "update_badge_id", "update_name", "update_badgeLevel"].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.value = "Aucun badge trouvé";
+            });
+        }
     } catch (error) {
         console.error("Erreur lors de la récupération du dernier badge :", error);
 
-        ["badge_id", "delete_badge_id", "update_badge_id"].forEach(id => {
+        ["badge_id", "delete_badge_id", "update_badge_id", "update_name", "update_badgeLevel"].forEach(id => {
             const input = document.getElementById(id);
             if (input) input.value = "Erreur de connexion";
         });
@@ -38,6 +50,7 @@ async function fetchLastBadge() {
         isFetching = false;
     }
 }
+
 
 // Lors du chargement de la page
 document.addEventListener("DOMContentLoaded", function () {
