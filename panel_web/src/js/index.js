@@ -6,73 +6,24 @@ if (!token) {
 }
 
 // Gère la déconnexion
-document.getElementById("logout").addEventListener("click", function() {
+document.getElementById("logout")?.addEventListener("click", function() {
     localStorage.removeItem('jwtToken'); 
     window.location.href = 'index.html'; 
 });
 
 function showSection(id) {
     const section = document.getElementById(id);
-
-    if (section.style.display === 'block') {
-        section.style.display = 'none';
-    } else {
-    
-        document.querySelectorAll('.section').forEach(sec => {
-            sec.style.display = 'none';
-        });
-        section.style.display = 'block';
-    }
-}
-
-// Fonction pour récupérer le dernier badge_id
-async function fetchLastBadge() {
-    const token = localStorage.getItem('jwtToken'); 
-
-    try {
-        const response = await fetch("https://arduinoooo.lol/last_badge", {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            }
-        });
-
-        const result = await response.json();
-
-        console.log(result); 
-
-        if (response.ok) {
-            
-            const badgeId = result.badge_id;
-            if (badgeId) {
-                console.log(`Badge ID récupéré: ${badgeId}`);
-                
-                document.getElementById("badge_id").value = badgeId;
-            } else {
-                console.log("Aucun badge trouvé.");
-                document.getElementById("badge_id").value = 'Aucun badge trouvé';
-            }
+    if (section) {
+        if (section.style.display === 'block') {
+            section.style.display = 'none';
         } else {
-            console.error("Erreur : Impossible de récupérer le dernier badge.");
-            document.getElementById("badge_id").value = 'Erreur de récupération';
+            document.querySelectorAll('.section').forEach(sec => sec.style.display = 'none');
+            section.style.display = 'block';
         }
-    } catch (error) {
-        console.error("Erreur lors de la récupération du dernier badge :", error);
-        document.getElementById("badge_id").value = 'Erreur de connexion';
     }
 }
 
-// Fonction appelée lorsque la page est complètement chargée
-document.addEventListener("DOMContentLoaded", function () {
-    fetchLastBadge(); 
-});
-
-// Ajout de l'événement pour le bouton "Rafraîchir" l'UID
-document.getElementById("refreshBadgeBtn").addEventListener("click", function () {
-    fetchLastBadge(); 
-});
-
+// Fonction pour récupérer un aperçu des logs
 async function fetchPreviewLogs() {
     try {
         const token = localStorage.getItem('jwtToken');
@@ -89,6 +40,8 @@ async function fetchPreviewLogs() {
         const latestLogs = logs.slice(0, 5); 
 
         const container = document.getElementById("preview-log-list");
+        if (!container) return;
+
         container.innerHTML = '';
 
         latestLogs.forEach(log => {
@@ -111,4 +64,5 @@ function formatDate(isoString) {
     });
 }
 
+// Récupérer les logs au chargement de la page
 document.addEventListener("DOMContentLoaded", fetchPreviewLogs);

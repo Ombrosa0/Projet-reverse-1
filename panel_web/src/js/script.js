@@ -1,8 +1,8 @@
-let isFetching = false; 
+let isFetching = false;
 
 // Fonction pour récupérer le dernier badge_id
 async function fetchLastBadge() {
-    if (isFetching) return; 
+    if (isFetching) return; // Empêche les appels multiples
     isFetching = true;
 
     const token = localStorage.getItem('jwtToken');
@@ -17,42 +17,41 @@ async function fetchLastBadge() {
         });
 
         const result = await response.json();
-        console.log(result); 
+        console.log("Réponse API /last_badge :", result); // Debug
 
-        if (response.ok) {
-            const badge_id = result.badge_id; 
-            if (badge_id) {
-                console.log(`Badge ID récupéré: ${badge_id}`);
-                document.getElementById("badge_id").value = badge_id; 
-            } else {
-                console.log("Aucun badge trouvé.");
-                document.getElementById("badge_id").value = 'Aucun badge trouvé';
-            }
-        } else {
-            console.error("Erreur : Impossible de récupérer le dernier badge.");
-            document.getElementById("badge_id").value = 'Erreur de récupération';
-        }
+        const badgeId = response.ok && result.badge_id ? result.badge_id : "Aucun badge trouvé";
+
+        ["badge_id", "delete_badge_id", "update_badge_id"].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) input.value = badgeId;
+        });
+
     } catch (error) {
         console.error("Erreur lors de la récupération du dernier badge :", error);
-        document.getElementById("badge_id").value = 'Erreur de connexion';
+
+        ["badge_id", "delete_badge_id", "update_badge_id"].forEach(id => {
+            const input = document.getElementById(id);
+            if (input) input.value = "Erreur de connexion";
+        });
+
     } finally {
         isFetching = false;
     }
 }
 
-
 // Lors du chargement de la page
 document.addEventListener("DOMContentLoaded", function () {
     fetchLastBadge();
+
+    // Ajout des événements aux boutons de rafraîchissement
+    ["refreshCreateBtn", "refreshDeleteBtn", "refreshModifBtn"].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.addEventListener("click", fetchLastBadge);
+    });
 });
 
-// Bouton de rafraîchissement de l'UID
-document.getElementById("refreshBadgeBtn").addEventListener("click", function () {
-    fetchLastBadge();
-});
-
-// Création d'un badge
-document.getElementById("badgeForm").addEventListener("submit", async function (event) {
+// Gestion de la création d'un badge
+document.getElementById("badgeForm")?.addEventListener("submit", async function (event) {
     event.preventDefault();
 
     const badgeData = {
@@ -95,7 +94,7 @@ document.getElementById("badgeForm").addEventListener("submit", async function (
 });
 
 // Suppression d'un badge
-document.getElementById("deleteBadgeForm").addEventListener("submit", async function (event) {
+document.getElementById("deleteBadgeForm")?.addEventListener("submit", async function (event) {
     event.preventDefault();
 
     const badgeId = document.getElementById("delete_badge_id").value.trim();
@@ -126,7 +125,7 @@ document.getElementById("deleteBadgeForm").addEventListener("submit", async func
 });
 
 // Modification d'un badge
-document.getElementById("updateBadgeForm").addEventListener("submit", async function (event) {
+document.getElementById("updateBadgeForm")?.addEventListener("submit", async function (event) {
     event.preventDefault();
 
     const badgeData = {
