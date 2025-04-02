@@ -13,8 +13,8 @@
 #include "mbedtls/base64.h"
 
 // Wifi values
-const char* ssid = "Pixel de Johann";
-const char* password = "mdpduturfu";
+const char* ssid = "RouteurCadeau";
+const char* password = "CadeauRouteur";
 
 // API values
 const char* serverUrl = "https://arduinoooo.lol/badge";
@@ -127,6 +127,18 @@ void loop() {
     clear();
   }
 
+  // Test if Wifi is connect
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Wi-Fi non connecté !");
+    digitalWrite(LEDR, HIGH);
+    String message = "Error WIFI";
+    msg(message);
+    delay(1500);
+    clear();
+    digitalWrite(LEDR, LOW);
+    return;
+  }
+
   // Test if card is detect
   if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) return;
 
@@ -140,17 +152,6 @@ void loop() {
   // -------------------------------------- //
   // ----------- Envoi HTTP POST -----------//
   // -------------------------------------- //
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("Wi-Fi non connecté !");
-    digitalWrite(LEDR, HIGH);
-    String message = "Error WIFI";
-    msg(message);
-    delay(1500);
-    clear();
-    digitalWrite(LEDR, LOW);
-    return;
-  }
-
   HTTPClient http;
   http.begin(client, serverUrl);
   http.addHeader("Content-Type", "application/json");
