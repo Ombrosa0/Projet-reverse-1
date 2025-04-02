@@ -12,68 +12,56 @@
 #include <base64.h>
 #include "mbedtls/base64.h"
 
-String base64Decode(String input) {
-    size_t outputLength;
-    uint8_t decoded[512];  // Ajuste la taille selon tes besoins
-    int ret = mbedtls_base64_decode(decoded, sizeof(decoded), &outputLength, 
-                                    (const unsigned char*)input.c_str(), input.length());
+// Wifi values
+const char* ssid = "Pixel de Johann";
+const char* password = "mdpduturfu";
 
-    if (ret != 0) {
-        Serial.println("Erreur de décodage Base64 !");
-        return "";
-    }
-    
-    return String((char*)decoded);
-}
-
-
-const char* ssid = "RouteurCadeau";
-const char* password = "CadeauRouteur";
+// API values
 const char* serverUrl = "https://arduinoooo.lol/badge";
 const char* serverLogin = "https://arduinoooo.lol/login";
+
+// Initialization expiration token date
 int expToken = 0;
 
-// Serveur NTP
+// Server NTP and clock
 const char* ntpServer = "pool.ntp.org";
 const long gmtOffset_sec = 0;
 const int daylightOffset_sec = 0;
-
 time_t currentTime;
 unsigned long lastMillis;
 
+// Initialization JWT token
 String jwtToken = "";
 
+// Define LED pins and RFID-RC522 pins
 #define RST_PIN 3
 #define SS_PIN 20
+MFRC522 mfrc522(SS_PIN, RST_PIN);
 #define LEDV 21
 #define LEDR 5
 
+// Define screen definition
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-
 #define OLED_RESET -1
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-const char* clearmsg = "";
 
-MFRC522 mfrc522(SS_PIN, RST_PIN);
+// Use https
 WiFiClientSecure client;
+
 
 void setup() {
 
   // ------------------------------------- //
   // --------------- Screen ---------------//
   // ------------------------------------- //
-
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
     Serial.println(F("SSD1306 allocation failed"));
     for (;;);
   }
-
   display.clearDisplay();
-
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-
   String message = "Setup ESP";
   int textWidth = message.length() * 6; // Chaque caractère est de 6 pixels de large
   int cursorX = (SCREEN_WIDTH - textWidth) / 2; // Centrer le texte
@@ -82,20 +70,17 @@ void setup() {
   display.display();
 
   // ------------------------------------- //
-  // ---------------- Base ----------------//
+  // -------- Start LED and Serial --------//
   // ------------------------------------- //
-
   pinMode(LEDV, OUTPUT);
   pinMode(LEDR, OUTPUT);
   digitalWrite(LEDV, LOW);
   digitalWrite(LEDR, LOW);
-
   Serial.begin(115200);
 
   // ------------------------------------- //
   // ------------- Connection -------------//
   // ------------------------------------- //
-
   WiFi.begin(ssid, password);
   Serial.print("Connexion au Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
@@ -103,15 +88,13 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\nConnecté au Wi-Fi !");
-
   client.setInsecure();
-  SPI.begin();
-  mfrc522.PCD_Init();
 
   // ------------------------------------- //
   // ---------------- RFID ----------------//
   // ------------------------------------- //
-
+  SPI.begin();
+  mfrc522.PCD_Init();
   Serial.println(F("Performing RFID self-test..."));
   if (!mfrc522.PCD_PerformSelfTest()) {
     Serial.println(F("RFID Module DEFECT or UNKNOWN"));
@@ -129,7 +112,6 @@ void setup() {
   updateTime();
   Serial.println("Get JWT token...");
   getTokenJWT();
-
   Serial.println("-----------------------------------------");
   Serial.println("-----------------------------------------");
   clear();
@@ -145,21 +127,19 @@ void loop() {
     clear();
   }
 
-
+  // Test if card is detect
   if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) return;
 
-  //Serial.print(F("Carte détectée ! UID : "));
+  // Read UID
   String uidString = "";
   for (int i = 0; i < mfrc522.uid.size; i++) {
     uidString += (mfrc522.uid.uidByte[i] < 0x10 ? "0" : "") + String(mfrc522.uid.uidByte[i], HEX);
   }
   uidString.toUpperCase();
-  //Serial.println(uidString);
 
   // -------------------------------------- //
   // ----------- Envoi HTTP POST -----------//
   // -------------------------------------- //
-
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Wi-Fi non connecté !");
     digitalWrite(LEDR, HIGH);
@@ -205,11 +185,10 @@ void loop() {
   // --------------------------------------- //
   // --------- Traitement des données -------//
   // --------------------------------------- //
-
   StaticJsonDocument<200> jsonResponse;
   DeserializationError error = deserializeJson(jsonResponse, response);
   http.end();
-
+  
   if (error) {
     Serial.println("Erreur de parsing JSON !");
     digitalWrite(LEDR, HIGH);
@@ -274,7 +253,7 @@ void updateTime() {
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo)) {
-        Serial.println("Erreur de r\xE9cup\xE9ration de l'heure !");
+        Serial.println("Erreur de récupération de l'heure !");
         return;
     }
     currentTime = mktime(&timeinfo);
@@ -358,4 +337,18 @@ String decodeJWT(String jwt) {
 
     String decodedPayload = base64Decode(payloadBase64);  // Décodage Base64
     return decodedPayload;
+}
+
+String base64Decode(String input) {
+    size_t outputLength;
+    uint8_t decoded[512];  // Ajuste la taille selon tes besoins
+    int ret = mbedtls_base64_decode(decoded, sizeof(decoded), &outputLength, 
+                                    (const unsigned char*)input.c_str(), input.length());
+
+    if (ret != 0) {
+        Serial.println("Erreur de décodage Base64 !");
+        return "";
+    }
+    
+    return String((char*)decoded);
 }
